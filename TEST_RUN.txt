@@ -1,0 +1,11 @@
+{
+  "returncode": 0,
+  "stdout": "HTML trace: /mnt/data/os_sync_lab/generated_html/readers_writers_semaphore.html (15 events)\nrw-sem: completed successfully; recorded 15 events\nHTML trace: /mnt/data/os_sync_lab/generated_html/readers_writers_monitor.html (15 events)\nrw-monitor: completed successfully; recorded 15 events\nHTML trace: /mnt/data/os_sync_lab/generated_html/dining_philosophers_semaphore.html (24 events)\ndp-sem: completed successfully; recorded 24 events\nHTML trace: /mnt/data/os_sync_lab/generated_html/dining_philosophers_monitor.html (20 events)\ndp-monitor: completed successfully; recorded 20 events\n\nOpen the generated HTML files in a browser to replay each event trace.\n",
+  "stderr": "Spreadsheet runtime warmup failed during python startup\nTraceback (most recent call last):\n  File \"/tmp/tmp.QlpUkOUI9D/artifact_tool_v2-2.8.66/artifact_tool/patches/warm_spreadsheet_runtime_on_startup.py\", line 26, in warm_spreadsheet_runtime_on_startup\n  File \"/tmp/tmp.QlpUkOUI9D/artifact_tool_v2-2.8.66/artifact_tool/spreadsheet_warmup.py\", line 785, in warm_spreadsheet_runtime\n  File \"/tmp/tmp.QlpUkOUI9D/artifact_tool_v2-2.8.66/artifact_tool/spreadsheet_warmup.py\", line 718, in _warm_feature_flows\n  File \"/tmp/tmp.QlpUkOUI9D/artifact_tool_v2-2.8.66/artifact_tool/spreadsheet_warmup.py\", line 509, in _warm_drawing_and_image_flows\n  File \"/tmp/tmp.QlpUkOUI9D/artifact_tool_v2-2.8.66/artifact_tool/generated/interface/models.py\", line 32861, in bring_to_front\n  File \"/tmp/tmp.QlpUkOUI9D/artifact_tool_v2-2.8.66/artifact_tool/rpc/remote.py\", line 764, in __call__\n  File \"/tmp/tmp.QlpUkOUI9D/artifact_tool_v2-2.8.66/artifact_tool/rpc/client.py\", line 175, in call\nartifact_tool.rpc.client.RemoteError: Element ordering requires an owning element collection.\n",
+  "html_files": [
+    "dining_philosophers_monitor.html",
+    "dining_philosophers_semaphore.html",
+    "readers_writers_monitor.html",
+    "readers_writers_semaphore.html"
+  ]
+}
