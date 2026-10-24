@@ -1,0 +1,342 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dining Philosophers - Semaphore</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f9;
+    color: #222;
+    max-width: 900px;
+    margin: 25px auto;
+    padding: 15px;
+}
+header, .panel {
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+h1 { font-size: 24px; }
+.table-scene { text-align: center; }
+.table-svg { width: 100%; max-width: 500px; height: auto; }
+.person-box {
+    fill: #c7e2f5;
+    stroke: #666;
+    stroke-width: 1.5;
+}
+.person-box.hungry { fill: #ffe6a3; }
+.person-box.eating { fill: #c8edc9; }
+.person-box.active { stroke: #222; stroke-width: 3; }
+.person-label {
+    font-size: 13px;
+    font-weight: bold;
+    text-anchor: middle;
+    fill: #222;
+}
+.state-label {
+    font-size: 11px;
+    text-anchor: middle;
+    fill: #333;
+}
+.fork {
+    stroke: #555;
+    stroke-width: 5;
+    stroke-linecap: round;
+}
+.fork.busy { stroke: #d17a00; }
+button {
+    padding: 8px 12px;
+    margin: 3px;
+    border: 1px solid #bbb;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.controls { margin: 12px 0; }
+input[type="range"] { width: 100%; }
+#current, #tableStatus {
+    background: #f0f3f7;
+    padding: 12px;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+table { width: 100%; border-collapse: collapse; }
+th, td {
+    border-bottom: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    font-size: 13px;
+}
+th { background: #eee; }
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>Dining Philosophers - Semaphore</h1>
+    <p>Simulation of four philosophers sharing four chopsticks using semaphores.</p>
+</header>
+
+<section class="panel table-scene">
+    <h2>Dining Table</h2>
+    <p>Each box represents a philosopher. Each line represents one chopstick.</p>
+
+    <svg class="table-svg" viewBox="0 0 400 330"
+         role="img" aria-label="Four philosophers around a circular table with four chopsticks">
+
+        <!-- Circular table -->
+        <circle cx="200" cy="165" r="105"
+                fill="#ead7b5" stroke="#987044" stroke-width="5"/>
+
+        <text x="200" y="160" text-anchor="middle"
+              font-size="16" fill="#333">Dining</text>
+        <text x="200" y="180" text-anchor="middle"
+              font-size="16" fill="#333">Table</text>
+
+        <!-- Exactly four chopsticks: one line per chopstick -->
+        <g id="fork0">
+            <line class="fork" x1="145" y1="83" x2="160" y2="98"/>
+        </g>
+        <g id="fork1">
+            <line class="fork" x1="240" y1="98" x2="255" y2="83"/>
+        </g>
+        <g id="fork2">
+            <line class="fork" x1="240" y1="232" x2="255" y2="247"/>
+        </g>
+        <g id="fork3">
+            <line class="fork" x1="145" y1="247" x2="160" y2="232"/>
+        </g>
+
+        <!-- Philosopher 0 -->
+        <g id="person0">
+            <rect class="person-box" x="145" y="5" width="110" height="28" rx="7"/>
+            <text class="person-label" x="200" y="23">P0</text>
+            <text class="state-label" id="state0" x="200" y="48">Thinking</text>
+        </g>
+
+        <!-- Philosopher 1 -->
+        <g id="person1">
+            <rect class="person-box" x="290" y="125" width="100" height="28" rx="7"/>
+            <text class="person-label" x="340" y="143">P1</text>
+            <text class="state-label" id="state1" x="340" y="170">Thinking</text>
+        </g>
+
+        <!-- Philosopher 2 -->
+        <g id="person2">
+            <rect class="person-box" x="145" y="290" width="110" height="28" rx="7"/>
+            <text class="person-label" x="200" y="308">P2</text>
+            <text class="state-label" id="state2" x="200" y="280">Thinking</text>
+        </g>
+
+        <!-- Philosopher 3 -->
+        <g id="person3">
+            <rect class="person-box" x="10" y="125" width="100" height="28" rx="7"/>
+            <text class="person-label" x="60" y="143">P3</text>
+            <text class="state-label" id="state3" x="60" y="170">Thinking</text>
+        </g>
+    </svg>
+
+    <div id="tableStatus">Press Play to inspect the events.</div>
+</section>
+
+<section class="panel">
+    <b id="counter">Step 0 of 0</b>
+    <input id="seek" type="range" min="0" max="0" value="0">
+
+    <div id="current">Press Play to inspect the trace.</div>
+
+    <div class="controls">
+        <button id="play">Play</button>
+        <button id="pause">Pause</button>
+        <button id="back">Previous</button>
+        <button id="next">Next</button>
+        <button id="reset">Reset</button>
+
+        <label>Speed:
+            <select id="speed">
+                <option value="1200">Slow</option>
+                <option value="650" selected>Normal</option>
+                <option value="250">Fast</option>
+            </select>
+        </label>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>Recorded Events</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th><th>Actor</th><th>State</th><th>Details</th>
+            </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+    </table>
+</section>
+
+<script>
+/*
+  Example event trace for the semaphore demonstration.
+  Replace these sample events with the actual trace generated by your Python program.
+*/
+const events = [
+    {step:1,actor:"Philosopher 0",state:"thinking",detail:"Thinking before acquiring chopsticks"},
+    {step:2,actor:"Philosopher 1",state:"thinking",detail:"Thinking before acquiring chopsticks"},
+    {step:3,actor:"Philosopher 2",state:"thinking",detail:"Thinking before acquiring chopsticks"},
+    {step:4,actor:"Philosopher 3",state:"thinking",detail:"Thinking before acquiring chopsticks"},
+    {step:5,actor:"Philosopher 0",state:"hungry",detail:"Waiting to acquire both chopsticks"},
+    {step:6,actor:"Philosopher 0",state:"eating",detail:"Acquired chopsticks 0 and 1"},
+    {step:7,actor:"Philosopher 1",state:"hungry",detail:"Waiting to acquire both chopsticks"},
+    {step:8,actor:"Philosopher 2",state:"hungry",detail:"Waiting to acquire both chopsticks"},
+    {step:9,actor:"Philosopher 2",state:"eating",detail:"Acquired chopsticks 2 and 3"},
+    {step:10,actor:"Philosopher 0",state:"finished eating",detail:"Released both chopsticks"},
+    {step:11,actor:"Philosopher 3",state:"hungry",detail:"Waiting to acquire both chopsticks"},
+    {step:12,actor:"Philosopher 1",state:"eating",detail:"Acquired chopsticks 1 and 2"},
+    {step:13,actor:"Philosopher 2",state:"finished eating",detail:"Released both chopsticks"},
+    {step:14,actor:"Philosopher 3",state:"eating",detail:"Acquired chopsticks 3 and 0"},
+    {step:15,actor:"Philosopher 1",state:"finished eating",detail:"Released both chopsticks"},
+    {step:16,actor:"Philosopher 3",state:"finished eating",detail:"Released both chopsticks"}
+];
+
+let index = -1;
+let timer = null;
+
+const seek = document.getElementById("seek");
+const current = document.getElementById("current");
+const counter = document.getElementById("counter");
+const rows = document.getElementById("rows");
+
+function escapeText(value) {
+    return String(value).replace(/[&<>"']/g, c => ({
+        "&":"&amp;", "<":"&lt;", ">":"&gt;",
+        '"':"&quot;", "'":"&#39;"
+    }[c]));
+}
+
+function updateDiningTable(event) {
+    for (let p = 0; p < 4; p++) {
+        const box = document.querySelector(`#person${p} .person-box`);
+        box.classList.remove("active", "eating", "hungry");
+        document.getElementById(`state${p}`).textContent = "Thinking";
+    }
+
+    for (let f = 0; f < 4; f++) {
+        document.querySelectorAll(`#fork${f} .fork`).forEach(line => {
+            line.classList.remove("busy");
+        });
+    }
+
+    if (!event) return;
+
+    const match = event.actor.match(/Philosopher\s+(\d+)/i);
+    if (!match) return;
+
+    const p = Number(match[1]);
+    const state = event.state.toLowerCase();
+    const box = document.querySelector(`#person${p} .person-box`);
+
+    const labels = {
+        thinking: "Thinking",
+        hungry: "Hungry",
+        eating: "Eating",
+        "finished eating": "Finished",
+        done: "Done"
+    };
+
+    box.classList.add("active");
+    document.getElementById(`state${p}`).textContent =
+        labels[state] || event.state;
+
+    if (state === "eating") {
+        box.classList.add("eating");
+
+        const allocated = event.detail.match(
+            /(?:chopsticks|forks?)\s+(\d+)\s+and\s+(\d+)/i
+        );
+        const forks = allocated
+            ? [Number(allocated[1]), Number(allocated[2])]
+            : [(p + 3) % 4, p];
+
+        forks.forEach(f => {
+            if (f >= 0 && f < 4) {
+                document.querySelectorAll(`#fork${f} .fork`).forEach(line => {
+                    line.classList.add("busy");
+                });
+            }
+        });
+    } else if (state === "hungry") {
+        box.classList.add("hungry");
+    }
+
+    document.getElementById("tableStatus").textContent =
+        `${event.actor}: ${event.state} — ${event.detail}`;
+}
+
+function show(i) {
+    if (!events.length) return;
+
+    index = Math.max(0, Math.min(i, events.length - 1));
+    seek.value = index;
+
+    const e = events[index];
+    counter.textContent = `Step ${index + 1} of ${events.length}`;
+
+    current.innerHTML =
+        `<b>${escapeText(e.actor)}</b> — ${escapeText(e.state)}` +
+        `<p>${escapeText(e.detail)}</p>`;
+
+    document.querySelectorAll("#rows tr").forEach((row, j) => {
+        row.style.background = j === index ? "#eef3f8" : "white";
+    });
+
+    updateDiningTable(e);
+}
+
+function stop() {
+    if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+    }
+}
+
+function play() {
+    stop();
+    if (index >= events.length - 1) show(0);
+
+    timer = setInterval(() => {
+        if (index >= events.length - 1) {
+            stop();
+            return;
+        }
+        show(index + 1);
+    }, Number(document.getElementById("speed").value));
+}
+
+document.getElementById("play").onclick = play;
+document.getElementById("pause").onclick = stop;
+document.getElementById("next").onclick = () => { stop(); show(index + 1); };
+document.getElementById("back").onclick = () => { stop(); show(index - 1); };
+document.getElementById("reset").onclick = () => { stop(); show(0); };
+seek.oninput = () => { stop(); show(Number(seek.value)); };
+document.getElementById("speed").onchange = () => {
+    if (timer !== null) play();
+};
+
+seek.max = Math.max(0, events.length - 1);
+
+rows.innerHTML = events.map(e =>
+    `<tr><td>${e.step}</td><td>${escapeText(e.actor)}</td>` +
+    `<td>${escapeText(e.state)}</td><td>${escapeText(e.detail)}</td></tr>`
+).join("");
+
+if (events.length) show(0);
+</script>
+
+</body>
+</html>

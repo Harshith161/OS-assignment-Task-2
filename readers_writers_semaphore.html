@@ -1,0 +1,534 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Readers-Writers - Semaphore</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    background: #f3f6fb;
+    color: #243247;
+}
+
+h1 {
+    text-align: center;
+    color: #234f88;
+}
+
+.subtitle {
+    text-align: center;
+    color: #64748b;
+    margin-bottom: 24px;
+}
+
+.panel {
+    max-width: 1000px;
+    margin: 18px auto;
+    padding: 18px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 3px 12px #0000000d;
+}
+
+.diagram {
+    overflow-x: auto;
+}
+
+svg {
+    width: 100%;
+    min-width: 650px;
+    display: block;
+}
+
+.connection {
+    stroke: #a5b5cb;
+    stroke-width: 3;
+    stroke-dasharray: 8 7;
+}
+
+.actor rect {
+    stroke-width: 2.5;
+    rx: 15;
+    transition: fill 0.3s, stroke 0.3s;
+}
+
+.actor text {
+    text-anchor: middle;
+    font-size: 17px;
+    font-weight: bold;
+    fill: #243247;
+}
+
+.actor .state {
+    font-size: 13px;
+    font-weight: normal;
+}
+
+.waiting rect {
+    fill: #fff1cc;
+    stroke: #e99a00;
+}
+
+.reading rect {
+    fill: #d9f7e5;
+    stroke: #159653;
+}
+
+.writing rect {
+    fill: #ffdddd;
+    stroke: #d83c3c;
+}
+
+.finished rect {
+    fill: #e7eaf0;
+    stroke: #7c8798;
+}
+
+#resource {
+    fill: #edf4ff;
+    stroke: #4d79b3;
+    stroke-width: 3;
+    transition: fill 0.3s;
+}
+
+#resource.reading {
+    fill: #d9f7e5;
+    stroke: #159653;
+}
+
+#resource.writing {
+    fill: #ffdddd;
+    stroke: #d83c3c;
+}
+
+.resource-title {
+    text-anchor: middle;
+    font-size: 20px;
+    font-weight: bold;
+    fill: #234f88;
+}
+
+.resource-status {
+    text-anchor: middle;
+    font-size: 13px;
+    fill: #40536c;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 9px;
+}
+
+button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    background: #315f9c;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #234674;
+}
+
+button.secondary {
+    background: #64748b;
+}
+
+input[type="range"] {
+    width: 100%;
+    margin: 16px 0;
+}
+
+#current {
+    padding: 14px;
+    background: #edf4ff;
+    border-radius: 9px;
+    line-height: 1.6;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.stat {
+    background: #f3f6fa;
+    padding: 13px;
+    border-radius: 9px;
+}
+
+.stat strong {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.table-wrap {
+    overflow-x: auto;
+    max-height: 350px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+th, td {
+    text-align: left;
+    padding: 10px;
+    border-bottom: 1px solid #e5eaf2;
+}
+
+th {
+    background: #edf4ff;
+    position: sticky;
+    top: 0;
+}
+
+tr.active {
+    background: #e2edff;
+    font-weight: bold;
+}
+
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+    font-size: 13px;
+    padding-top: 12px;
+}
+
+.dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    margin-right: 5px;
+}
+
+.note {
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.5;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Readers-Writers Problem</h1>
+<p class="subtitle">Semaphore Synchronization Animation</p>
+
+<section class="panel diagram">
+<svg viewBox="0 0 820 310" aria-label="Readers and writers sharing a resource">
+
+    <line class="connection" x1="215" y1="65" x2="340" y2="130"/>
+    <line class="connection" x1="215" y1="245" x2="340" y2="190"/>
+    <line class="connection" x1="605" y1="65" x2="480" y2="130"/>
+    <line class="connection" x1="605" y1="245" x2="480" y2="190"/>
+
+    <rect id="resource" x="315" y="105"
+          width="190" height="105" rx="22"/>
+
+    <text class="resource-title" x="410" y="148">SHARED</text>
+    <text class="resource-title" x="410" y="173">RESOURCE</text>
+    <text id="resourceStatus" class="resource-status"
+          x="410" y="195">Idle</text>
+
+    <g id="R0" class="actor waiting" transform="translate(35 35)">
+        <rect width="180" height="60"/>
+        <text x="90" y="25">Reader R0</text>
+        <text class="state" x="90" y="45">Waiting</text>
+    </g>
+
+    <g id="R1" class="actor waiting" transform="translate(35 215)">
+        <rect width="180" height="60"/>
+        <text x="90" y="25">Reader R1</text>
+        <text class="state" x="90" y="45">Waiting</text>
+    </g>
+
+    <g id="W0" class="actor waiting" transform="translate(605 35)">
+        <rect width="180" height="60"/>
+        <text x="90" y="25">Writer W0</text>
+        <text class="state" x="90" y="45">Waiting</text>
+    </g>
+
+    <g id="W1" class="actor waiting" transform="translate(605 215)">
+        <rect width="180" height="60"/>
+        <text x="90" y="25">Writer W1</text>
+        <text class="state" x="90" y="45">Waiting</text>
+    </g>
+</svg>
+
+<div class="legend">
+    <span><i class="dot" style="background:#fff1cc"></i>Waiting</span>
+    <span><i class="dot" style="background:#d9f7e5"></i>Reading</span>
+    <span><i class="dot" style="background:#ffdddd"></i>Writing</span>
+    <span><i class="dot" style="background:#e7eaf0"></i>Finished</span>
+</div>
+</section>
+
+<section class="panel">
+    <div class="controls">
+        <button id="play">▶ Play</button>
+        <button id="pause" class="secondary">⏸ Pause</button>
+        <button id="previous" class="secondary">◀ Previous</button>
+        <button id="next" class="secondary">Next ▶</button>
+        <button id="reset" class="secondary">↻ Reset</button>
+
+        <label>
+            Speed:
+            <select id="speed">
+                <option value="1600">Slow</option>
+                <option value="900" selected>Normal</option>
+                <option value="350">Fast</option>
+            </select>
+        </label>
+    </div>
+
+    <input id="seek" type="range" min="0" max="0" value="0">
+    <p id="counter">Step 1</p>
+    <div id="current">Press Play to start.</div>
+</section>
+
+<section class="panel">
+    <h2>Live Status</h2>
+    <div class="stats">
+        <div class="stat">
+            <strong>Active Readers</strong>
+            <span id="readerCount">0</span>
+        </div>
+        <div class="stat">
+            <strong>Active Writer</strong>
+            <span id="writerCount">None</span>
+        </div>
+        <div class="stat">
+            <strong>Shared Resource</strong>
+            <span id="resourceState">Idle</span>
+        </div>
+        <div class="stat">
+            <strong>Semaphore Access</strong>
+            <span id="semaphoreState">Available</span>
+        </div>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>Execution Event Log</h2>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Step</th>
+                    <th>Process</th>
+                    <th>State</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+        </table>
+    </div>
+    <p class="note">
+        This is an illustrative trace. Its order is a demonstration sequence,
+        not a live record from your Python program.
+    </p>
+</section>
+
+<script>
+const events = [
+    {actor:"R0", state:"waiting", detail:"Reader R0 requests access."},
+    {actor:"R0", state:"reading", detail:"First reader locks the resource for readers."},
+    {actor:"R1", state:"reading", detail:"Reader R1 joins; both readers may read together."},
+    {actor:"W0", state:"waiting", detail:"Writer W0 requests exclusive access and waits."},
+    {actor:"W1", state:"waiting", detail:"Writer W1 requests exclusive access and waits."},
+    {actor:"R0", state:"finished", detail:"Reader R0 finishes reading."},
+    {actor:"R1", state:"finished", detail:"Last reader exits and releases the resource."},
+    {actor:"W0", state:"writing", detail:"Writer W0 acquires exclusive access."},
+    {actor:"R0", state:"waiting", detail:"Reader R0 waits while the writer is active."},
+    {actor:"W0", state:"finished", detail:"Writer W0 completes and releases the resource."},
+    {actor:"W1", state:"writing", detail:"Writer W1 acquires exclusive access."},
+    {actor:"W1", state:"finished", detail:"Writer W1 finishes writing."},
+    {actor:"R0", state:"reading", detail:"Reader R0 begins reading again."},
+    {actor:"R1", state:"reading", detail:"Reader R1 joins Reader R0."},
+    {actor:"R0", state:"finished", detail:"Reader R0 finishes."},
+    {actor:"R1", state:"finished", detail:"Reader R1 finishes; resource is free."}
+];
+
+const actorIds = ["R0", "R1", "W0", "W1"];
+let index = 0;
+let timer = null;
+
+function escapeText(value) {
+    return String(value ?? "").replace(/[&<>"']/g, ch => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    }[ch]));
+}
+
+function render() {
+    const states = {
+        R0: "waiting",
+        R1: "waiting",
+        W0: "waiting",
+        W1: "waiting"
+    };
+
+    for (let i = 0; i <= index; i++) {
+        states[events[i].actor] = events[i].state;
+    }
+
+    actorIds.forEach(id => {
+        const actor = document.getElementById(id);
+        const state = states[id];
+        actor.setAttribute("class", "actor " + state);
+
+        actor.querySelector(".state").textContent =
+            state.charAt(0).toUpperCase() + state.slice(1);
+    });
+
+    const activeReaders = ["R0", "R1"].filter(
+        id => states[id] === "reading"
+    ).length;
+
+    const activeWriter = ["W0", "W1"].find(
+        id => states[id] === "writing"
+    );
+
+    const resource = document.getElementById("resource");
+
+    resource.setAttribute(
+        "class",
+        activeWriter ? "writing" : activeReaders ? "reading" : ""
+    );
+
+    const resourceStatus = activeWriter
+        ? "Writing"
+        : activeReaders
+            ? "Reading"
+            : "Idle";
+
+    document.getElementById("resourceStatus").textContent =
+        resourceStatus;
+
+    document.getElementById("readerCount").textContent =
+        activeReaders;
+
+    document.getElementById("writerCount").textContent =
+        activeWriter || "None";
+
+    document.getElementById("resourceState").textContent =
+        resourceStatus;
+
+    document.getElementById("semaphoreState").textContent =
+        activeWriter ? "Writer access" :
+        activeReaders ? "Reader access" : "Available";
+
+    const event = events[index];
+
+    document.getElementById("counter").textContent =
+        `Step ${index + 1} of ${events.length}`;
+
+    document.getElementById("seek").value = index;
+
+    document.getElementById("current").innerHTML =
+        `<strong>${escapeText(event.actor)}</strong> — ` +
+        `<strong>${escapeText(event.state)}</strong><br>` +
+        escapeText(event.detail);
+
+    document.querySelectorAll("#rows tr").forEach((row, i) => {
+        row.classList.toggle("active", i === index);
+    });
+}
+
+function stop() {
+    if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+    }
+}
+
+function play() {
+    stop();
+
+    if (index >= events.length - 1) {
+        index = 0;
+    }
+
+    render();
+
+    timer = setInterval(() => {
+        if (index >= events.length - 1) {
+            stop();
+            return;
+        }
+
+        index++;
+        render();
+    }, Number(document.getElementById("speed").value));
+}
+
+function next() {
+    stop();
+    if (index < events.length - 1) index++;
+    render();
+}
+
+function previous() {
+    stop();
+    if (index > 0) index--;
+    render();
+}
+
+function reset() {
+    stop();
+    index = 0;
+    render();
+}
+
+document.getElementById("play").onclick = play;
+document.getElementById("pause").onclick = stop;
+document.getElementById("next").onclick = next;
+document.getElementById("previous").onclick = previous;
+document.getElementById("reset").onclick = reset;
+
+document.getElementById("seek").oninput = event => {
+    stop();
+    index = Number(event.target.value);
+    render();
+};
+
+document.getElementById("speed").onchange = () => {
+    if (timer !== null) play();
+};
+
+document.getElementById("seek").max = events.length - 1;
+
+document.getElementById("rows").innerHTML = events.map((event, i) =>
+    `<tr><td>${i + 1}</td>` +
+    `<td>${escapeText(event.actor)}</td>` +
+    `<td>${escapeText(event.state)}</td>` +
+    `<td>${escapeText(event.detail)}</td></tr>`
+).join("");
+
+render();
+</script>
+
+</body>
+</html>
